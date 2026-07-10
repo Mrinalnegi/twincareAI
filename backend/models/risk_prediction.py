@@ -30,10 +30,13 @@ class RiskPrediction(Base):
     risk_level: Mapped[str] = mapped_column(
         String(20), nullable=False
     )  # low, moderate, high, very_high
+    threshold_used: Mapped[float] = mapped_column(Float, nullable=False, default=0.4)
+    risk_band: Mapped[str] = mapped_column(String(20), nullable=False, default="low")
     # SHAP values: {features: [...], values: [...], base_value: float}
     shap_values: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Feature importance: [{feature, importance, direction}, ...]
     feature_importance: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    shap_explanation: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     predicted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

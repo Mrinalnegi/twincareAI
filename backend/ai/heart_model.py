@@ -1,307 +1,159 @@
-"""Heart disease risk prediction model.
+"""
+heart_model.py — inference module for TwinCare's CVD risk model.
 
-PyTorch MLP trained on health biomarker features. This is the AMD GPU centerpiece:
-- Trained on ROCm in the Jupyter notebook
-- Inference runs on whatever device is available (GPU preferred, CPU fallback)
-
-If no trained model file exists, falls back to a rule-based risk calculation
-so the demo always works.
+Loads the v3 LightGBM model (trained on Framingham, real features only,
+class-weighted, honestly cross-validated).
 """
 
-import logging
 from pathlib import Path
-
+import joblib
 import numpy as np
-import torch
-import torch.nn as nn
-
-from config import settings
+import logging
 
 logger = logging.getLogger(__name__)
 
+MODEL_DIR = Path(__file__).parent
+MODEL_PATH = MODEL_DIR / "heart_disease_model_v3_lgb.joblib"
+SCALER_PATH = MODEL_DIR / "scaler_v3.joblib"
 
-# Feature configuration — order matters, must match training
+# Order matters — must exactly match training order
 FEATURE_NAMES = [
-    "age",
-    "sex",                  # 0=female, 1=male
-    "total_cholesterol",
-    "ldl_cholesterol",
-    "hdl_cholesterol",
-    "triglycerides",
-    "fasting_glucose",
-    "systolic_bp",
-    "diastolic_bp",
-    "bmi",
+    "age", "sex", "education", "currentSmoker", "cigsPerDay",
+    "BPMeds", "prevalentStroke", "prevalentHyp", "diabetes",
+    "total_cholesterol", "systolic_bp", "diastolic_bp", "bmi",
+    "heart_rate", "fasting_glucose", "pulse_pressure", "map",
 ]
 
-# Population medians for imputation of missing values
-POPULATION_MEDIANS = {
-    "age": 50.0,
-    "sex": 0.5,
-    "total_cholesterol": 200.0,
-    "ldl_cholesterol": 100.0,
-    "hdl_cholesterol": 55.0,
-    "triglycerides": 130.0,
-    "fasting_glucose": 95.0,
-    "systolic_bp": 120.0,
-    "diastolic_bp": 80.0,
-    "bmi": 25.0,
-}
+DECISION_THRESHOLD = 0.15
 
-# Feature normalization parameters (from training data statistics)
-FEATURE_MEANS = {
-    "age": 50.08, "sex": 0.56, "total_cholesterol": 200.48,
-    "ldl_cholesterol": 115.93, "hdl_cholesterol": 51.75, "triglycerides": 140.63,
-    "fasting_glucose": 105.51, "systolic_bp": 129.30, "diastolic_bp": 82.15, "bmi": 26.03,
-}
+# Calibrated risk bands aligned with clinical guidelines (e.g. ACC/AHA CHD risk categories)
+RISK_BANDS = [
+    (0.0, 0.05, "low"),
+    (0.05, 0.15, "moderate"),
+    (0.15, 1.01, "elevated"),
+]
 
-FEATURE_STDS = {
-    "age": 11.97, "sex": 0.50, "total_cholesterol": 38.99,
-    "ldl_cholesterol": 34.43, "hdl_cholesterol": 14.68, "triglycerides": 57.55,
-    "fasting_glucose": 24.40, "systolic_bp": 17.71, "diastolic_bp": 10.12, "bmi": 4.87,
-}
+_model = None
+_scaler = None
 
 
-class HeartDiseaseNet(nn.Module):
-    """3-layer MLP for heart disease risk prediction."""
-
-    def __init__(self, input_size: int = 10):
-        super().__init__()
-        self.network = nn.Sequential(
-            nn.Linear(input_size, 64),
-            nn.ReLU(),
-            nn.BatchNorm1d(64),
-            nn.Dropout(0.3),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.BatchNorm1d(32),
-            nn.Dropout(0.2),
-            nn.Linear(32, 16),
-            nn.ReLU(),
-            nn.Linear(16, 1),
-            nn.Sigmoid(),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.network(x)
+def _load():
+    """Load LightGBM model + scaler."""
+    global _model, _scaler
+    if _model is None:
+        if not MODEL_PATH.exists():
+            raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+        if not SCALER_PATH.exists():
+            raise FileNotFoundError(f"Scaler file not found at {SCALER_PATH}")
+        _model = joblib.load(MODEL_PATH)
+        _scaler = joblib.load(SCALER_PATH)
+    return _model, _scaler
 
 
-# Global model instance
-_model: HeartDiseaseNet | None = None
-_model_loaded: bool = False
-
-
-def load_model() -> HeartDiseaseNet | None:
-    """Load the trained heart disease model from disk."""
-    global _model, _model_loaded
-
-    if _model_loaded:
-        return _model
-
-    model_path = Path(settings.HEART_MODEL_PATH)
-    if model_path.exists():
-        try:
-            model = HeartDiseaseNet()
-            state_dict = torch.load(model_path, map_location="cpu", weights_only=True)
-            model.load_state_dict(state_dict)
-            model.eval()
-            _model = model
-            _model_loaded = True
-            logger.info(f"Heart disease model loaded from {model_path}")
-            return model
-        except Exception as e:
-            logger.error(f"Failed to load model: {e}")
-            _model_loaded = True
-            return None
-    else:
-        logger.warning(f"No model file found at {model_path} — using rule-based fallback")
-        _model_loaded = True
+def load_model():
+    """Compatibility wrapper around _load() so main.py startup check doesn't break."""
+    try:
+        model, _ = _load()
+        return model
+    except Exception as e:
+        logger.error(f"Failed to load model in startup wrapper: {e}")
         return None
 
 
-def prepare_features(biomarkers: dict, user_profile: dict) -> tuple[np.ndarray, dict]:
+def _risk_band(prob: float) -> str:
+    for lo, hi, label in RISK_BANDS:
+        if lo <= prob < hi:
+            return label
+    return "elevated"
+
+
+def build_feature_vector(patient: dict) -> np.ndarray:
     """
-    Prepare feature vector from biomarkers and user profile.
+    Build 17-feature input vector from 15 raw features.
     
-    Returns:
-        Tuple of (normalized feature array, dict of raw feature values used)
+    Accepts keys in either snake_case or camelCase:
+      age, sex (1=male/0=female), education (1-4), current_smoker/currentSmoker, 
+      cigs_per_day/cigsPerDay, bp_meds/BPMeds, prevalent_stroke/prevalentStroke, 
+      prevalent_hyp/prevalentHyp, diabetes, total_cholesterol, systolic_bp, 
+      diastolic_bp, bmi, heart_rate, fasting_glucose
     """
-    from datetime import date
-
-    # Extract raw feature values
-    raw_features = {}
-
-    # Age from date of birth
-    dob = user_profile.get("date_of_birth")
-    if dob:
-        if isinstance(dob, str):
-            dob = date.fromisoformat(dob)
-        today = date.today()
-        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-        raw_features["age"] = float(age)
-
-    # Sex from gender
-    gender = user_profile.get("gender", "")
-    if gender:
-        raw_features["sex"] = 1.0 if gender.lower() == "male" else 0.0
-
-    # Map biomarkers to features
-    biomarker_to_feature = {
+    raw_keys_map = {
+        "age": "age",
+        "sex": "sex",
+        "education": "education",
+        "currentSmoker": "currentSmoker",
+        "current_smoker": "currentSmoker",
+        "cigsPerDay": "cigsPerDay",
+        "cigs_per_day": "cigsPerDay",
+        "BPMeds": "BPMeds",
+        "bp_meds": "BPMeds",
+        "prevalentStroke": "prevalentStroke",
+        "prevalent_stroke": "prevalentStroke",
+        "prevalentHyp": "prevalentHyp",
+        "prevalent_hyp": "prevalentHyp",
+        "diabetes": "diabetes",
         "total_cholesterol": "total_cholesterol",
-        "ldl_cholesterol": "ldl_cholesterol",
-        "hdl_cholesterol": "hdl_cholesterol",
-        "triglycerides": "triglycerides",
+        "systolic_bp": "systolic_bp",
+        "diastolic_bp": "diastolic_bp",
+        "bmi": "bmi",
+        "heart_rate": "heart_rate",
         "fasting_glucose": "fasting_glucose",
     }
 
-    for biomarker_name, feature_name in biomarker_to_feature.items():
-        if biomarker_name in biomarkers:
-            bio = biomarkers[biomarker_name]
-            value = bio.get("value") if isinstance(bio, dict) else bio
-            if value is not None:
-                raw_features[feature_name] = float(value)
+    # Map input keys to model-expected keys
+    values = {}
+    for input_k, input_v in patient.items():
+        if input_k in raw_keys_map:
+            values[raw_keys_map[input_k]] = input_v
 
-    # Build feature vector with imputation
-    feature_vector = []
-    features_used = {}
-    for fname in FEATURE_NAMES:
-        if fname in raw_features:
-            val = raw_features[fname]
-            features_used[fname] = {"value": val, "source": "actual"}
-        else:
-            val = POPULATION_MEDIANS[fname]
-            features_used[fname] = {"value": val, "source": "imputed"}
+    required_raw = [
+        "age", "sex", "education", "currentSmoker", "cigsPerDay",
+        "BPMeds", "prevalentStroke", "prevalentHyp", "diabetes",
+        "total_cholesterol", "systolic_bp", "diastolic_bp", "bmi",
+        "heart_rate", "fasting_glucose",
+    ]
 
-        # Normalize
-        normalized = (val - FEATURE_MEANS[fname]) / max(FEATURE_STDS[fname], 1e-6)
-        feature_vector.append(normalized)
+    # Explicitly check for missing or None values
+    missing = [k for k in required_raw if k not in values or values[k] is None]
+    if missing:
+        raise ValueError(f"Missing required clinical history: {missing}")
 
-    return np.array(feature_vector, dtype=np.float32), features_used
+    # Explicitly cast boolean fields to integer (0 or 1)
+    bool_fields = ["currentSmoker", "BPMeds", "prevalentStroke", "prevalentHyp", "diabetes"]
+    for field in bool_fields:
+        values[field] = int(bool(values[field]))
+
+    # Compute clinical derived features
+    values["pulse_pressure"] = float(values["systolic_bp"]) - float(values["diastolic_bp"])
+    values["map"] = float(values["diastolic_bp"]) + (float(values["systolic_bp"]) - float(values["diastolic_bp"])) / 3.0
+
+    # Ensure all raw values are float/int
+    for name in FEATURE_NAMES:
+        values[name] = float(values[name])
+
+    return np.array([[values[name] for name in FEATURE_NAMES]], dtype=np.float32)
 
 
-def predict_risk(biomarkers: dict, user_profile: dict) -> dict:
+def predict_risk(patient: dict) -> dict:
     """
     Predict heart disease risk.
     
-    Returns dict with: probability, confidence, risk_level, features_used
+    Returns:
+      {
+        "risk_probability": float,        # 0-1
+        "risk_band": str,                 # "low" | "moderate" | "elevated"
+        "flagged": bool,                  # probability > DECISION_THRESHOLD
+        "threshold_used": float,
+      }
     """
-    features, features_used = prepare_features(biomarkers, user_profile)
-
-    model = load_model()
-
-    if model is not None:
-        # PyTorch model inference
-        with torch.no_grad():
-            input_tensor = torch.FloatTensor(features).unsqueeze(0)
-            probability = model(input_tensor).item()
-
-        # Confidence based on how many features are actual vs imputed
-        actual_count = sum(1 for v in features_used.values() if v["source"] == "actual")
-        confidence = min(0.95, 0.5 + (actual_count / len(FEATURE_NAMES)) * 0.45)
-
-    else:
-        # Rule-based fallback
-        probability, confidence = _rule_based_prediction(features_used)
-
-    # Determine risk level
-    if probability < 0.2:
-        risk_level = "low"
-    elif probability < 0.4:
-        risk_level = "moderate"
-    elif probability < 0.6:
-        risk_level = "high"
-    else:
-        risk_level = "very_high"
+    model, scaler = _load()
+    X = build_feature_vector(patient)
+    X_scaled = scaler.transform(X)
+    prob = float(model.predict_proba(X_scaled)[0, 1])
 
     return {
-        "probability": round(probability, 4),
-        "confidence": round(confidence, 4),
-        "risk_level": risk_level,
-        "features_used": features_used,
+        "risk_probability": round(prob, 4),
+        "risk_band": _risk_band(prob),
+        "flagged": prob > DECISION_THRESHOLD,
+        "threshold_used": DECISION_THRESHOLD,
     }
-
-
-def _rule_based_prediction(features_used: dict) -> tuple[float, float]:
-    """
-    Rule-based fallback prediction when no trained model is available.
-    Uses clinical risk factor guidelines.
-    """
-    risk_score = 0.0
-    max_score = 0.0
-
-    # Age risk (men > 45, women > 55 have higher risk)
-    age = features_used.get("age", {}).get("value", 50)
-    sex = features_used.get("sex", {}).get("value", 0.5)
-    if age > 55:
-        risk_score += 2
-    elif age > 45:
-        risk_score += 1
-    max_score += 2
-
-    # Cholesterol risk
-    chol = features_used.get("total_cholesterol", {}).get("value", 200)
-    if chol > 240:
-        risk_score += 2
-    elif chol > 200:
-        risk_score += 1
-    max_score += 2
-
-    # LDL risk
-    ldl = features_used.get("ldl_cholesterol", {}).get("value", 100)
-    if ldl > 160:
-        risk_score += 2
-    elif ldl > 130:
-        risk_score += 1
-    max_score += 2
-
-    # HDL protection (higher is better)
-    hdl = features_used.get("hdl_cholesterol", {}).get("value", 55)
-    if hdl < 40:
-        risk_score += 2
-    elif hdl < 50:
-        risk_score += 1
-    max_score += 2
-
-    # Triglycerides
-    tg = features_used.get("triglycerides", {}).get("value", 130)
-    if tg > 200:
-        risk_score += 1.5
-    elif tg > 150:
-        risk_score += 0.5
-    max_score += 1.5
-
-    # Blood sugar
-    glucose = features_used.get("fasting_glucose", {}).get("value", 95)
-    if glucose > 126:
-        risk_score += 2
-    elif glucose > 100:
-        risk_score += 1
-    max_score += 2
-
-    # Blood pressure
-    sbp = features_used.get("systolic_bp", {}).get("value", 120)
-    if sbp > 140:
-        risk_score += 2
-    elif sbp > 130:
-        risk_score += 1
-    max_score += 2
-
-    # BMI
-    bmi = features_used.get("bmi", {}).get("value", 25)
-    if bmi > 30:
-        risk_score += 1.5
-    elif bmi > 25:
-        risk_score += 0.5
-    max_score += 1.5
-
-    probability = risk_score / max(max_score, 1)
-    # Lower confidence for rule-based
-    actual_count = sum(1 for v in features_used.values() if v["source"] == "actual")
-    confidence = min(0.75, 0.3 + (actual_count / len(FEATURE_NAMES)) * 0.45)
-
-    return probability, confidence
-
-
-def get_feature_names() -> list[str]:
-    """Return the ordered feature names used by the model."""
-    return FEATURE_NAMES.copy()

@@ -28,17 +28,17 @@ Upload a blood report → AI extracts biomarkers → Digital Twin updates → He
 ```
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
 │   React Frontend │────▶│  FastAPI Backend  │────▶│   PostgreSQL     │
-│   (TypeScript)   │     │  (Python 3.11)   │     │   (Data Store)   │
+│   (TypeScript)   │     │  (Python 3.13)   │     │   (Data Store)   │
 └──────────────────┘     └────────┬─────────┘     └──────────────────┘
                                   │
                     ┌─────────────┼─────────────┐
                     ▼             ▼             ▼
             ┌──────────┐  ┌──────────┐  ┌──────────┐
-            │ OCR      │  │ PyTorch  │  │ Fireworks│
+            │ OCR      │  │ LightGBM │  │ Fireworks│
             │ Pipeline │  │ Heart    │  │ API      │
             │(Tesseract)│  │ Model   │  │ (Gemma)  │
             └──────────┘  │ + SHAP   │  └──────────┘
-                          │ (ROCm)   │
+                          │ (CPU)    │
                           └──────────┘
 ```
 
@@ -51,8 +51,8 @@ Upload a blood report → AI extracts biomarkers → Digital Twin updates → He
 | Frontend | React + TypeScript + TailwindCSS | UI via Natively Builder |
 | Backend | FastAPI + SQLAlchemy + PostgreSQL | REST API + business logic |
 | OCR | Tesseract + pdf2image | Report text extraction |
-| Risk Model | PyTorch MLP (ROCm) | Heart disease prediction |
-| Explainability | SHAP | Feature attribution |
+| Risk Model | LightGBM (CPU) | Heart disease risk prediction |
+| Explainability | SHAP TreeExplainer | Live feature attribution |
 | LLM | Fireworks API (Gemma 2) | Health Copilot + NER fallback |
 | Deployment | Docker Compose | One-command launch |
 
@@ -120,13 +120,34 @@ docker compose exec backend python seed_data/seed.py
 
 ## 🤖 AMD GPU Usage
 
-The heart disease prediction model is **trained and served using PyTorch on AMD ROCm**:
+The heart disease model comparison and development phase utilized **PyTorch on AMD ROCm** (for neural network training and validation):
 
-- **Training**: AMD GPU Jupyter Notebook (`notebooks/01_heart_disease_model_training.ipynb`)
-- **Inference**: PyTorch MLP running on ROCm-compatible hardware
-- **Proof**: `rocm-smi` shows GPU utilization during training and inference
+- **Model Selection & Comparison**: AMD GPU environment compared PyTorch MLPs, XGBoost, and LightGBM models.
+- **Production Inference**: The selected production model is a LightGBM gradient-boosted tree classifier, which runs efficiently on CPU during inference.
+- **Gemma Copilot**: The AI Health Copilot uses **Gemma 2 via Fireworks AI** (optimized for AMD hardware).
 
-The Copilot uses **Gemma 2 via Fireworks AI** (eligible for AMD Gemma bonus).
+---
+
+## 🗃️ Model Card: TwinCare AI CVD Risk Model (v3)
+
+### Overview
+- **Model Type**: Calibrated LightGBM (via 5-fold cross-validated Platt/Sigmoid Calibration)
+- **Task**: 10-year risk prediction of future Coronary Heart Disease (CHD)
+- **Dataset**: Framingham Heart Study (4,240 records, 17 features)
+- **Inputs**: 15 patient intake & biomarker fields + 2 derived features (Pulse Pressure and Mean Arterial Pressure)
+- **Decision Threshold**: 0.15 (optimized for screening sensitivity post-calibration)
+
+### Performance Evaluation
+Evaluating the production calibrated LightGBM model on held-out test data (Stratified 20% Split):
+- **AUC-ROC**: **0.684** (honest stratified validation, an improvement over the uncalibrated 0.664)
+- **Recall (Sensitivity)**: **65.8%** (at 0.15 threshold, correctly flagging the majority of positive cases)
+- **Precision**: **23.9%** (screening tool trade-off: 1 in 4 flagged patients has true risk, framing results as "worth a closer clinical look")
+- **F1 Score**: **0.350**
+- **Average Predicted Probability**: **15.6%** (perfectly calibrated to match the true baseline CHD prevalence rate of 15.2% in the training data, resolving the 37.8% raw uncalibrated inflation)
+
+### Key Limitations
+- **Dated Dataset**: Framingham data is historical (30-70 years old) and single-population (Framingham, MA), so it may not generalize perfectly to all demographics.
+- **Screening Tool Focus**: Optimizing for high Recall leads to false positives. The model should be framed as a screening aid rather than a diagnostic tool.
 
 ---
 
@@ -136,13 +157,14 @@ The Copilot uses **Gemma 2 via Fireworks AI** (eligible for AMD Gemma bonus).
 twincareAI/
 ├── docker-compose.yml          # One-command launch
 ├── .env.example                # Configuration template
+├── CHANGES.md                  # Model pass changelog (v1 -> v2 -> v3)
 ├── README.md                   # You are here
 ├── backend/
 │   ├── Dockerfile
 │   ├── main.py                 # FastAPI app
 │   ├── config.py               # Settings
 │   ├── database.py             # PostgreSQL connection
-│   ├── models/                 # SQLAlchemy models (6 tables)
+│   ├── models/                 # SQLAlchemy models (7 tables)
 │   ├── schemas/                # Pydantic request/response
 │   ├── routers/                # API endpoints
 │   ├── services/               # Business logic
@@ -150,7 +172,7 @@ twincareAI/
 │   ├── utils/                  # Security, biomarker ranges
 │   └── seed_data/              # Demo data seeder
 ├── frontend/                   # React app (Natively Builder)
-└── notebooks/                  # AMD GPU training notebooks
+└── notebooks/                  # Historical and v3 training notebooks
 ```
 
 ---

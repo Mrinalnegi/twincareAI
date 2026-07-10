@@ -2,11 +2,14 @@
 
 import logging
 from uuid import UUID
+from datetime import date
 
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 
 from models.risk_prediction import RiskPrediction
 from models.user import User
+from models.patient_intake import PatientIntake
 from services.digital_twin_service import get_or_create_twin
 from ai.heart_model import predict_risk
 from ai.shap_explainer import compute_shap_values
@@ -20,40 +23,92 @@ async def run_prediction_for_user(
     report_id: UUID | None = None,
 ) -> RiskPrediction:
     """
-    Run heart disease risk prediction for a user using their current Digital Twin state.
+    Run heart disease risk prediction for a user using their PatientIntake and Digital Twin biomarkers.
     
     Creates a new RiskPrediction record with probability, confidence, SHAP values,
     and feature importance.
     """
-    # Get user profile
+    # 1. Get user profile
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Get current Digital Twin state
+    # 2. Get patient intake clinical history
+    intake = db.query(PatientIntake).filter(PatientIntake.user_id == user_id).first()
+    if not intake:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please complete your health questionnaire before generating a risk prediction."
+        )
+
+    # 3. Get current Digital Twin state biomarkers
     twin = get_or_create_twin(db, user_id)
     biomarkers = twin.current_biomarkers or {}
 
-    if not biomarkers:
-        logger.warning(f"No biomarker data for user {user_id} — skipping prediction")
+    # Calculate age
+    dob = user.date_of_birth
+    if not dob:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Date of birth is required to calculate age for risk prediction."
+        )
+    if isinstance(dob, str):
+        dob = date.fromisoformat(dob)
+    today = date.today()
+    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    # Map gender: 1 = male, 0 = female per Framingham coding
+    gender = (user.gender or "").lower()
+    if gender == "male":
+        sex = 1
+    elif gender == "female":
+        sex = 0
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Gender must be set to 'male' or 'female' to compute Framingham heart disease risk."
+        )
+
+    # Helper to retrieve twin biomarker values
+    def get_biomarker_val(name):
+        bio = biomarkers.get(name)
+        if isinstance(bio, dict):
+            return bio.get("value")
         return None
 
-    # Build user profile dict
-    user_profile = {
-        "date_of_birth": str(user.date_of_birth) if user.date_of_birth else None,
-        "gender": user.gender,
+    # Construct patient input dict
+    patient_dict = {
+        "age": float(age),
+        "sex": int(sex),
+        "education": intake.education,
+        "current_smoker": intake.current_smoker,
+        "cigs_per_day": intake.cigs_per_day,
+        "bp_meds": intake.bp_meds,
+        "prevalent_stroke": intake.prevalent_stroke,
+        "prevalent_hyp": intake.prevalent_hyp,
+        "diabetes": intake.diabetes,
+        "total_cholesterol": get_biomarker_val("total_cholesterol"),
+        "systolic_bp": get_biomarker_val("systolic_bp"),
+        "diastolic_bp": get_biomarker_val("diastolic_bp"),
+        "bmi": get_biomarker_val("bmi"),
+        "heart_rate": get_biomarker_val("heart_rate"),
+        "fasting_glucose": get_biomarker_val("fasting_glucose"),
     }
 
-    # Run prediction
-    logger.info(f"Running heart disease prediction for user {user_id}")
-    result = predict_risk(biomarkers, user_profile)
+    # 4. Execute prediction
+    try:
+        logger.info(f"Running heart disease prediction for user {user_id}")
+        result = predict_risk(patient_dict)
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Incomplete clinical profile: {str(ve)}"
+        )
 
-    # Compute SHAP explainability
-    explanation = compute_shap_values(result["features_used"], result)
+    # 5. Compute SHAP explainability
+    explanation = compute_shap_values(patient_dict, result)
 
-    # Create or update prediction record
-    # Delete old heart_disease prediction for this user (keep only latest)
+    # 6. Delete old prediction to keep latest prediction record
     db.query(RiskPrediction).filter(
         RiskPrediction.user_id == user_id,
         RiskPrediction.disease_type == "heart_disease",
@@ -63,19 +118,23 @@ async def run_prediction_for_user(
         user_id=user_id,
         report_id=report_id,
         disease_type="heart_disease",
-        probability=result["probability"],
-        confidence=result["confidence"],
-        risk_level=result["risk_level"],
+        probability=result["risk_probability"],
+        confidence=0.95,  # High confidence since all inputs are present
+        risk_level=result["risk_band"],
+        threshold_used=result["threshold_used"],
+        risk_band=result["risk_band"],
         shap_values=explanation["shap_values"],
         feature_importance=explanation["feature_importance"],
+        shap_explanation=explanation,
     )
+    
     db.add(prediction)
     db.commit()
     db.refresh(prediction)
 
     logger.info(
-        f"Prediction saved: {result['risk_level']} risk "
-        f"({result['probability']:.1%} probability, {result['confidence']:.1%} confidence)"
+        f"Prediction saved: {prediction.risk_band} risk "
+        f"({prediction.probability:.1%} probability, threshold_used={prediction.threshold_used})"
     )
     return prediction
 
@@ -100,7 +159,6 @@ def get_prediction_by_id(
     ).first()
 
     if not prediction:
-        from fastapi import HTTPException, status
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Prediction not found"
         )
