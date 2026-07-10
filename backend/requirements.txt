@@ -28,6 +28,9 @@ torch
 numpy
 scikit-learn
 shap
+lightgbm
+joblib
 
 # HTTP client for Fireworks API
 httpx
+

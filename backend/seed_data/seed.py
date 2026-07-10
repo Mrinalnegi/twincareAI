@@ -3,8 +3,8 @@ Seed script — populates the database with demo data for presentations.
 
 Run: python seed_data/seed.py
 
-Creates a demo user with pre-populated biomarkers, digital twin state,
-and risk prediction so the dashboard immediately shows data.
+Creates a demo user with pre-populated patient intake, biomarkers,
+digital twin state, and v3 risk prediction so the dashboard immediately shows data.
 """
 
 import sys
@@ -22,6 +22,7 @@ from models.biomarker import Biomarker
 from models.digital_twin import DigitalTwinState
 from models.risk_prediction import RiskPrediction
 from models.chat_message import ChatMessage
+from models.patient_intake import PatientIntake
 from utils.security import hash_password
 
 
@@ -49,6 +50,21 @@ def seed_database():
         db.flush()
         print(f"✅ Demo user created: demo@twincare.ai / demo123")
 
+        # Create patient intake clinical history for demo user
+        intake = PatientIntake(
+            user_id=user.id,
+            education=2,
+            current_smoker=True,
+            cigs_per_day=10,
+            bp_meds=False,
+            prevalent_stroke=False,
+            prevalent_hyp=True,
+            diabetes=False,
+        )
+        db.add(intake)
+        db.flush()
+        print(f"✅ Patient intake clinical history created for demo user")
+
         # Create a demo report (simulating an already-processed upload)
         report = Report(
             user_id=user.id,
@@ -68,6 +84,10 @@ def seed_database():
                          "BLOOD SUGAR:\n"
                          "Fasting Glucose: 112 mg/dL (Ref: 70-100) HIGH\n"
                          "HbA1c: 5.9% (Ref: 4.0-5.7) HIGH\n\n"
+                         "VITALS:\n"
+                         "Blood Pressure: 145/90 mmHg HIGH\n"
+                         "BMI: 28.5 kg/m2 OVERWEIGHT\n"
+                         "Heart Rate: 78 bpm NORMAL\n\n"
                          "COMPLETE BLOOD COUNT:\n"
                          "Hemoglobin: 14.8 g/dL (Ref: 12.0-17.5) NORMAL\n"
                          "RBC Count: 5.2 million/µL (Ref: 4.0-6.0) NORMAL\n"
@@ -87,7 +107,7 @@ def seed_database():
                          "VITAMINS:\n"
                          "Vitamin D: 22 ng/mL (Ref: 30-100) LOW\n"
                          "Vitamin B12: 380 pg/mL (Ref: 200-900) NORMAL",
-                "char_count": 1200,
+                "char_count": 1350,
             },
             processed_at=datetime.now(timezone.utc),
         )
@@ -104,6 +124,10 @@ def seed_database():
             ("VLDL Cholesterol", 37.0, "mg/dL", "2-30 mg/dL", "high"),
             ("Fasting Glucose", 112.0, "mg/dL", "70-100 mg/dL", "high"),
             ("HbA1c", 5.9, "%", "4.0-5.7 %", "high"),
+            ("Systolic BP", 145.0, "mmHg", "90-120 mmHg", "high"),
+            ("Diastolic BP", 90.0, "mmHg", "60-80 mmHg", "high"),
+            ("BMI", 28.5, "kg/m2", "18.5-24.9 kg/m2", "high"),
+            ("Heart Rate", 78.0, "bpm", "60-100 bpm", "normal"),
             ("Hemoglobin", 14.8, "g/dL", "12.0-17.5 g/dL", "normal"),
             ("RBC Count", 5.2, "million/µL", "4.0-6.0 million/µL", "normal"),
             ("WBC Count", 7200.0, "/µL", "4000-11000 /µL", "normal"),
@@ -137,18 +161,22 @@ def seed_database():
         twin = DigitalTwinState(
             user_id=user.id,
             current_biomarkers={
-                "total_cholesterol": {"value": 242, "unit": "mg/dL", "status": "high", "display_name": "Total Cholesterol", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "ldl_cholesterol": {"value": 158, "unit": "mg/dL", "status": "high", "display_name": "LDL Cholesterol", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "hdl_cholesterol": {"value": 42, "unit": "mg/dL", "status": "normal", "display_name": "HDL Cholesterol", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "triglycerides": {"value": 185, "unit": "mg/dL", "status": "high", "display_name": "Triglycerides", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "fasting_glucose": {"value": 112, "unit": "mg/dL", "status": "high", "display_name": "Fasting Glucose", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "total_cholesterol": {"value": 242.0, "unit": "mg/dL", "status": "high", "display_name": "Total Cholesterol", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "ldl_cholesterol": {"value": 158.0, "unit": "mg/dL", "status": "high", "display_name": "LDL Cholesterol", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "hdl_cholesterol": {"value": 42.0, "unit": "mg/dL", "status": "normal", "display_name": "HDL Cholesterol", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "triglycerides": {"value": 185.0, "unit": "mg/dL", "status": "high", "display_name": "Triglycerides", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "fasting_glucose": {"value": 112.0, "unit": "mg/dL", "status": "high", "display_name": "Fasting Glucose", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "systolic_bp": {"value": 145.0, "unit": "mmHg", "status": "high", "display_name": "Systolic BP", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "diastolic_bp": {"value": 90.0, "unit": "mmHg", "status": "high", "display_name": "Diastolic BP", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "bmi": {"value": 28.5, "unit": "kg/m2", "status": "high", "display_name": "BMI", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "heart_rate": {"value": 78.0, "unit": "bpm", "status": "normal", "display_name": "Heart Rate", "recorded_at": datetime.now(timezone.utc).isoformat()},
                 "hba1c": {"value": 5.9, "unit": "%", "status": "high", "display_name": "HbA1c", "recorded_at": datetime.now(timezone.utc).isoformat()},
                 "hemoglobin": {"value": 14.8, "unit": "g/dL", "status": "normal", "display_name": "Hemoglobin", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "sgot_ast": {"value": 32, "unit": "U/L", "status": "normal", "display_name": "SGOT (AST)", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "sgpt_alt": {"value": 38, "unit": "U/L", "status": "normal", "display_name": "SGPT (ALT)", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "sgot_ast": {"value": 32.0, "unit": "U/L", "status": "normal", "display_name": "SGOT (AST)", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "sgpt_alt": {"value": 38.0, "unit": "U/L", "status": "normal", "display_name": "SGPT (ALT)", "recorded_at": datetime.now(timezone.utc).isoformat()},
                 "creatinine": {"value": 1.0, "unit": "mg/dL", "status": "normal", "display_name": "Creatinine", "recorded_at": datetime.now(timezone.utc).isoformat()},
                 "tsh": {"value": 2.8, "unit": "mIU/L", "status": "normal", "display_name": "TSH", "recorded_at": datetime.now(timezone.utc).isoformat()},
-                "vitamin_d": {"value": 22, "unit": "ng/mL", "status": "low", "display_name": "Vitamin D", "recorded_at": datetime.now(timezone.utc).isoformat()},
+                "vitamin_d": {"value": 22.0, "unit": "ng/mL", "status": "low", "display_name": "Vitamin D", "recorded_at": datetime.now(timezone.utc).isoformat()},
             },
             health_score=72.5,
             organ_scores={
@@ -163,30 +191,38 @@ def seed_database():
         db.add(twin)
         print(f"✅ Digital Twin state created (health_score=72.5)")
 
-        # Create risk prediction
+        # Create v3 risk prediction structure
+        shap_explanation = {
+            "shap_values": {
+                "features": ["Systolic BP", "Total Cholesterol", "Fasting Glucose", "Age", "Cigarettes Per Day", "Diastolic BP", "BMI", "Heart Rate", "Prior Hypertension"],
+                "values": [0.08, 0.06, 0.04, 0.03, 0.02, 0.01, 0.005, 0.003, 0.002],
+                "base_value": 0.15
+            },
+            "feature_importance": [
+                {"feature": "Systolic BP", "importance": 0.08, "direction": "increases_risk", "actual_value": 145.0, "source": "actual"},
+                {"feature": "Total Cholesterol", "importance": 0.06, "direction": "increases_risk", "actual_value": 242.0, "source": "actual"},
+                {"feature": "Fasting Glucose", "importance": 0.04, "direction": "increases_risk", "actual_value": 112.0, "source": "actual"},
+                {"feature": "Age", "importance": 0.03, "direction": "increases_risk", "actual_value": 41.0, "source": "actual"},
+                {"feature": "Cigarettes Per Day", "importance": 0.02, "direction": "increases_risk", "actual_value": 10.0, "source": "actual"},
+                {"feature": "Diastolic BP", "importance": 0.01, "direction": "increases_risk", "actual_value": 90.0, "source": "actual"},
+            ]
+        }
+
         prediction = RiskPrediction(
             user_id=user.id,
             report_id=report.id,
             disease_type="heart_disease",
             probability=0.34,
-            confidence=0.87,
+            confidence=0.95,
             risk_level="moderate",
-            shap_values={
-                "features": ["LDL Cholesterol", "Total Cholesterol", "Fasting Glucose", "Age", "Triglycerides", "HDL Cholesterol", "BMI", "Systolic BP", "Diastolic BP", "Sex"],
-                "values": [0.08, 0.06, 0.04, 0.03, 0.02, 0.01, 0.005, 0.003, 0.002, 0.001],
-                "base_value": 0.18,
-            },
-            feature_importance=[
-                {"feature": "LDL Cholesterol", "importance": 0.08, "direction": "increases_risk", "actual_value": 158, "source": "actual"},
-                {"feature": "Total Cholesterol", "importance": 0.06, "direction": "increases_risk", "actual_value": 242, "source": "actual"},
-                {"feature": "Fasting Glucose", "importance": 0.04, "direction": "increases_risk", "actual_value": 112, "source": "actual"},
-                {"feature": "Age", "importance": 0.03, "direction": "increases_risk", "actual_value": 40, "source": "actual"},
-                {"feature": "Triglycerides", "importance": 0.02, "direction": "increases_risk", "actual_value": 185, "source": "actual"},
-                {"feature": "HDL Cholesterol", "importance": 0.01, "direction": "decreases_risk", "actual_value": 42, "source": "actual"},
-            ],
+            threshold_used=0.4,
+            risk_band="moderate",
+            shap_values=shap_explanation["shap_values"],
+            feature_importance=shap_explanation["feature_importance"],
+            shap_explanation=shap_explanation,
         )
         db.add(prediction)
-        print(f"✅ Heart disease risk prediction created (34% moderate risk)")
+        print(f"✅ Heart disease risk prediction created (34% moderate risk, threshold=0.4)")
 
         # Create demo chat messages
         chat_messages = [

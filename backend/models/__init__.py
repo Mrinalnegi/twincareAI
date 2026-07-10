@@ -6,6 +6,7 @@ from models.biomarker import Biomarker
 from models.digital_twin import DigitalTwinState
 from models.risk_prediction import RiskPrediction
 from models.chat_message import ChatMessage
+from models.patient_intake import PatientIntake
 
 __all__ = [
     "User",
@@ -14,4 +15,5 @@ __all__ = [
     "DigitalTwinState",
     "RiskPrediction",
     "ChatMessage",
+    "PatientIntake",
 ]

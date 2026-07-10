@@ -29,6 +29,7 @@ from schemas.copilot import (
     ChatMessageItem,
 )
 from schemas.dashboard import DashboardResponse, TimelineEvent, RiskSummaryItem
+from schemas.patient_intake import PatientIntakeCreate, PatientIntakeResponse
 
 __all__ = [
     "UserRegister", "UserLogin", "UserResponse", "AuthResponse", "TokenData",
@@ -38,4 +39,5 @@ __all__ = [
     "RiskPredictionResponse", "RiskPredictionListResponse", "ShapValues", "FeatureImportance",
     "ChatRequest", "ChatResponse", "ChatHistoryResponse", "ChatMessageItem",
     "DashboardResponse", "TimelineEvent", "RiskSummaryItem",
+    "PatientIntakeCreate", "PatientIntakeResponse",
 ]

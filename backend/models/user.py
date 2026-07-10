@@ -33,6 +33,9 @@ class User(Base):
     digital_twin = relationship(
         "DigitalTwinState", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    patient_intake = relationship(
+        "PatientIntake", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
     risk_predictions = relationship(
         "RiskPrediction", back_populates="user", cascade="all, delete-orphan"
     )

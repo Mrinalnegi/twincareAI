@@ -89,6 +89,7 @@ from routers.digital_twin import router as digital_twin_router
 from routers.risk_predictions import router as risk_predictions_router
 from routers.copilot import router as copilot_router
 from routers.dashboard import router as dashboard_router
+from routers.patient_intake import router as patient_intake_router
 
 API_PREFIX = "/api/v1"
 
@@ -98,6 +99,7 @@ app.include_router(digital_twin_router, prefix=API_PREFIX)
 app.include_router(risk_predictions_router, prefix=API_PREFIX)
 app.include_router(copilot_router, prefix=API_PREFIX)
 app.include_router(dashboard_router, prefix=API_PREFIX)
+app.include_router(patient_intake_router, prefix=API_PREFIX)
 
 
 # --- Health check ---
