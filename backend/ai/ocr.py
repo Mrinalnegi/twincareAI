@@ -45,6 +45,24 @@ def extract_text_from_file(file_path: str) -> str:
     ext = Path(file_path).suffix.lower()
     
     if ext == ".pdf":
+        # 1. Try extracting text directly using pypdf (extremely fast, no poppler/tesseract dependencies)
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(file_path)
+            extracted_texts = []
+            for i, page in enumerate(reader.pages):
+                page_text = page.extract_text()
+                if page_text and len(page_text.strip()) > 10:
+                    extracted_texts.append(f"--- Page {i + 1} ---\n{page_text}")
+            
+            if extracted_texts:
+                full_text = "\n\n".join(extracted_texts)
+                logger.info(f"Directly extracted {len(full_text)} characters using pypdf")
+                return full_text
+        except Exception as pe:
+            logger.warning(f"Direct PDF text extraction failed: {pe}. Falling back to OCR.")
+
+        # 2. Fall back to Poppler + Tesseract OCR if direct text extraction is empty
         images = pdf_to_images(file_path)
         texts = []
         for i, img in enumerate(images):
@@ -60,6 +78,7 @@ def extract_text_from_file(file_path: str) -> str:
     
     else:
         raise ValueError(f"Unsupported file type: {ext}")
+
 
 
 def is_ocr_available() -> bool:

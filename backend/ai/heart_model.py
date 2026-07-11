@@ -24,7 +24,7 @@ FEATURE_NAMES = [
     "heart_rate", "fasting_glucose", "pulse_pressure", "map",
 ]
 
-DECISION_THRESHOLD = 0.15
+DECISION_THRESHOLD = 0.15  # Optimized screening threshold. At training baseline 0.40: AUC 0.664, precision 22.1%, recall 64.9%, F1 0.330
 
 # Calibrated risk bands aligned with clinical guidelines (e.g. ACC/AHA CHD risk categories)
 RISK_BANDS = [

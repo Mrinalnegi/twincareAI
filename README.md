@@ -135,14 +135,14 @@ The heart disease model comparison and development phase utilized **PyTorch on A
 - **Task**: 10-year risk prediction of future Coronary Heart Disease (CHD)
 - **Dataset**: Framingham Heart Study (4,240 records, 17 features)
 - **Inputs**: 15 patient intake & biomarker fields + 2 derived features (Pulse Pressure and Mean Arterial Pressure)
-- **Decision Threshold**: 0.15 (optimized for screening sensitivity post-calibration)
+- **Decision Threshold**: 0.40 (baseline sweep) / 0.15 (clinical screening threshold)
 
 ### Performance Evaluation
-Evaluating the production calibrated LightGBM model on held-out test data (Stratified 20% Split):
-- **AUC-ROC**: **0.684** (honest stratified validation, an improvement over the uncalibrated 0.664)
-- **Recall (Sensitivity)**: **65.8%** (at 0.15 threshold, correctly flagging the majority of positive cases)
-- **Precision**: **23.9%** (screening tool trade-off: 1 in 4 flagged patients has true risk, framing results as "worth a closer clinical look")
-- **F1 Score**: **0.350**
+Evaluating the production v3 LightGBM model on held-out test data (Stratified 20% Split):
+- **AUC-ROC**: **0.664**
+- **Recall (Sensitivity)**: **64.9%** (at 0.40 threshold, correctly flagging the majority of positive cases)
+- **Precision**: **22.1%** (at 0.40 threshold, screening tool trade-off: 1 in 5 flagged patients has true risk)
+- **F1 Score**: **0.330**
 - **Average Predicted Probability**: **15.6%** (perfectly calibrated to match the true baseline CHD prevalence rate of 15.2% in the training data, resolving the 37.8% raw uncalibrated inflation)
 
 ### Key Limitations
