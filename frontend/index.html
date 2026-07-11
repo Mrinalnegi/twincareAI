@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TwinCare AI — Personal Health Intelligence</title>
+    <meta name="description" content="TwinCare AI: An AI-powered Digital Twin platform that transforms your blood reports into actionable health intelligence with calibrated CVD risk predictions.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .view:not(.active) { display: none !important; }
+        .view.active { display: flex !important; }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     1. LANDING VIEW
+══════════════════════════════════════════════════ -->
+<section id="landing-view" class="view active">
+    <div class="landing-bg">
+        <img src="landing_page.png" alt="TwinCare AI" class="landing-img">
+        <div class="landing-bottom-overlay">
+            <div class="landing-bottom-content">
+                <div class="landing-pill-badge">
+                    <i class="fa-solid fa-dna"></i>
+                    AMD Developer Hackathon: ACT II — Track 3
+                </div>
+                <div class="landing-cta-group">
+                    <p class="landing-cta-tagline">Your personal health intelligence platform</p>
+                    <button id="get-started-btn" class="btn-get-started">
+                        Get Started <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     2. AUTH VIEW
+══════════════════════════════════════════════════ -->
+<section id="auth-view" class="view">
+    <div class="auth-layout">
+        <div class="auth-brand-panel">
+            <div class="auth-brand-inner">
+                <div class="auth-brand-logo">
+                    <i class="fa-solid fa-dna"></i>
+                    <span>TwinCare Ai</span>
+                </div>
+                <h2 class="auth-brand-heading">Cardiovascular Risk.<br>Calibrated by AI.</h2>
+                <p class="auth-brand-sub">Upload a blood report to construct your clinical digital twin. Calibrate your 10-year cardiovascular risk score, analyze biomarker details under clinical ranges, and consult our advanced reasoning health copilot.</p>
+                <div class="auth-brand-features">
+                    <div class="auth-feature-item"><i class="fa-solid fa-circle-nodes"></i><span>Digital Twin Engine</span></div>
+                    <div class="auth-feature-item"><i class="fa-solid fa-chart-bar"></i><span>SHAP Explainability</span></div>
+                    <div class="auth-feature-item"><i class="fa-solid fa-robot"></i><span>Gemma 2 Reasoning Copilot</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="auth-form-panel">
+            <div class="auth-form-inner">
+                <div class="auth-tabs">
+                    <button id="tab-login-btn" class="auth-tab active">Login</button>
+                    <button id="tab-register-btn" class="auth-tab">Sign Up</button>
+                </div>
+                <div id="auth-alert" class="alert hidden"></div>
+                <form id="login-form" class="auth-form active">
+                    <div class="form-group">
+                        <label for="login-email"><i class="fa-regular fa-envelope"></i> Email Address</label>
+                        <input type="email" id="login-email" required placeholder="demo@twincare.ai">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+                        <input type="password" id="login-password" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" id="login-submit-btn" class="btn btn-primary w-full" style="padding:0.85rem;font-size:1rem;border-radius:0.75rem;">Sign In</button>
+                    <p class="auth-hint">Demo: <code>demo@twincare.ai</code> / <code>demo123</code></p>
+                </form>
+                <form id="register-form" class="auth-form">
+                    <div class="form-group">
+                        <label for="reg-name"><i class="fa-regular fa-user"></i> Full Name</label>
+                        <input type="text" id="reg-name" required placeholder="Alex Johnson">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email"><i class="fa-regular fa-envelope"></i> Email</label>
+                        <input type="email" id="reg-email" required placeholder="alex@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-dob"><i class="fa-regular fa-calendar"></i> Date of Birth</label>
+                        <input type="date" id="reg-dob" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-gender"><i class="fa-solid fa-venus-mars"></i> Sex (Framingham)</label>
+                        <select id="reg-gender" required>
+                            <option value="" disabled selected>Select sex...</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password"><i class="fa-solid fa-lock"></i> Password</label>
+                        <input type="password" id="reg-password" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full" style="padding:0.85rem;font-size:1rem;border-radius:0.75rem;">Create Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     3. INTAKE VIEW
+══════════════════════════════════════════════════ -->
+<section id="intake-view" class="view">
+    <div class="intake-scroll-container">
+        <div class="intake-container">
+            <div class="glass-card intake-card">
+                <div class="intake-header">
+                    <div class="intake-icon-badge"><i class="fa-solid fa-clipboard-question"></i></div>
+                    <h2>Clinical Health Intake</h2>
+                    <p>Complete this brief questionnaire to calibrate your 10-year CVD risk model.</p>
+                </div>
+                <div id="intake-alert" class="alert hidden"></div>
+                <form id="intake-form">
+                    <div class="intake-grid">
+                        <div class="form-group">
+                            <label for="intake-education"><i class="fa-solid fa-user-graduate"></i> Education Level</label>
+                            <select id="intake-education" required>
+                                <option value="" disabled selected>Choose...</option>
+                                <option value="1">Some High School</option>
+                                <option value="2">High School / GED</option>
+                                <option value="3">Some College / Vocational</option>
+                                <option value="4">College Graduate or Higher</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="intake-smoker"><i class="fa-solid fa-smoking"></i> Smoking Status</label>
+                            <select id="intake-smoker" required>
+                                <option value="" disabled selected>Choose...</option>
+                                <option value="false">Non-Smoker</option>
+                                <option value="true">Active Smoker</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="cigs-per-day-group">
+                            <label for="intake-cigs"><i class="fa-solid fa-calculator"></i> Cigarettes per Day</label>
+                            <input type="number" id="intake-cigs" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="intake-bpmeds"><i class="fa-solid fa-pills"></i> On BP Meds?</label>
+                            <select id="intake-bpmeds" required>
+                                <option value="" disabled selected>Choose...</option>
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="intake-stroke"><i class="fa-solid fa-brain"></i> History of Stroke?</label>
+                            <select id="intake-stroke" required>
+                                <option value="" disabled selected>Choose...</option>
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="intake-hyp"><i class="fa-solid fa-heart-pulse"></i> Hypertension?</label>
+                            <select id="intake-hyp" required>
+                                <option value="" disabled selected>Choose...</option>
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label for="intake-diabetes"><i class="fa-solid fa-droplet"></i> Diabetes?</label>
+                            <select id="intake-diabetes" required>
+                                <option value="" disabled selected>Choose...</option>
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full mt-6" style="padding:0.85rem;font-size:1rem;border-radius:0.75rem;">
+                        Save &amp; Open Dashboard <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     4. DASHBOARD VIEW — White / light theme
+     Orange #F5A623 · Purple #7C71D9 · Teal #13B8A6
+══════════════════════════════════════════════════ -->
+<section id="dashboard-view" class="view">
+
+    <header class="dh-header">
+        <div class="dh-header-left">
+            <p class="dh-twin-label">Your digital twin</p>
+            <h1 class="dh-greeting" id="user-greeting">Good morning</h1>
+        </div>
+        <div class="dh-header-right">
+            <button id="edit-intake-btn" class="dh-icon-btn" title="Edit Health Profile"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button id="copilot-toggle-btn" class="dh-icon-btn dh-icon-btn--purple" title="Health Copilot"><i class="fa-solid fa-robot"></i></button>
+            <button id="logout-btn" class="dh-icon-btn dh-icon-btn--red" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </header>
+
+    <div class="dh-body">
+
+        <!-- ── CARDS COLUMN ── -->
+        <div class="dh-cards-col">
+
+            <!-- BIOMARKER SNAPSHOT -->
+            <div class="hc">
+                <div class="hc-row-space">
+                    <h2 class="hc-title">Biomarker snapshot</h2>
+                    <button id="view-shap-btn" class="hc-sparkle-btn" title="View SHAP explanation">
+                        <i class="fa-solid fa-star-of-life"></i>
+                    </button>
+                </div>
+                <div class="bio-snapshot-body">
+                    <div class="bio-rings-wrap">
+                        <svg viewBox="0 0 160 160" width="150" height="150" style="transform:rotate(-90deg);">
+                            <circle r="66" cx="80" cy="80" fill="none" stroke="#F0F0F0" stroke-width="13"/>
+                            <circle r="50" cx="80" cy="80" fill="none" stroke="#F0F0F0" stroke-width="13"/>
+                            <circle r="34" cx="80" cy="80" fill="none" stroke="#F0F0F0" stroke-width="13"/>
+                            <circle id="ring-glucose"      r="66" cx="80" cy="80" fill="none" stroke="#F5A623" stroke-width="13" stroke-linecap="round" stroke-dasharray="414.69" stroke-dashoffset="414.69"/>
+                            <circle id="ring-cholesterol"  r="50" cx="80" cy="80" fill="none" stroke="#7C71D9" stroke-width="13" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+                            <circle id="ring-bp"           r="34" cx="80" cy="80" fill="none" stroke="#13B8A6" stroke-width="13" stroke-linecap="round" stroke-dasharray="213.63" stroke-dashoffset="213.63"/>
+                        </svg>
+                    </div>
+                    <div class="bio-legend">
+                        <div class="bio-leg-item">
+                            <span class="bio-dot" style="background:#F5A623;"></span>
+                            <div>
+                                <p class="bio-leg-label">Glucose</p>
+                                <strong class="bio-leg-val" id="bio-glucose">-- <span class="bio-leg-unit">mg/dL</span></strong>
+                            </div>
+                        </div>
+                        <div class="bio-leg-item">
+                            <span class="bio-dot" style="background:#7C71D9;"></span>
+                            <div>
+                                <p class="bio-leg-label">Cholesterol</p>
+                                <strong class="bio-leg-val" id="bio-cholesterol">-- <span class="bio-leg-unit">mg/dL</span></strong>
+                            </div>
+                        </div>
+                        <div class="bio-leg-item">
+                            <span class="bio-dot" style="background:#13B8A6;"></span>
+                            <div>
+                                <p class="bio-leg-label">Blood pressure</p>
+                                <strong class="bio-leg-val" id="bio-bp">--/-- <span class="bio-leg-unit">mmHg</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CVD RISK -->
+            <div class="hc hc-risk">
+                <div class="hc-row-space">
+                    <div>
+                        <p class="hc-label">10-year CVD risk</p>
+                        <div class="risk-val-row">
+                            <span class="risk-pct" id="risk-prob-val">--%</span>
+                            <span class="risk-chip" id="risk-flagged-desc"></span>
+                        </div>
+                        <p class="risk-band-txt" id="risk-band-badge">-- risk band</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p class="hc-label">Threshold</p>
+                        <p class="risk-threshold" id="risk-threshold-val">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEALTH SCORE + COPILOT SHORTCUT -->
+            <div class="hc-row-grid">
+                <div class="hc hc-stat">
+                    <p class="hc-label">Health score</p>
+                    <div style="display:flex;align-items:baseline;gap:4px;">
+                        <strong class="stat-big" id="health-score-val">--</strong>
+                        <span class="stat-unit">/100</span>
+                    </div>
+                </div>
+                <div class="hc hc-stat hc-copilot-card" id="copilot-shortcut-card">
+                    <p class="hc-label">Health copilot</p>
+                    <strong class="copilot-cta">Ask about your latest results</strong>
+                    <i class="fa-solid fa-arrow-right copilot-arrow"></i>
+                </div>
+            </div>
+
+            <!-- WEEKLY STRIP -->
+            <div class="hc hc-week">
+                <div class="week-strip" id="week-strip"></div>
+            </div>
+
+            <!-- ORGAN HEALTH BARS -->
+            <div class="hc">
+                <p class="hc-title" style="margin-bottom:1rem;">Organ system health</p>
+                <div class="organ-bars">
+                    <div class="organ-bar-row">
+                        <span class="ob-label">Heart</span>
+                        <div class="ob-track"><div class="ob-fill ob-orange" id="organ-heart-bar" style="width:0%"></div></div>
+                        <span class="ob-val" id="organ-heart-val">--</span>
+                    </div>
+                    <div class="organ-bar-row">
+                        <span class="ob-label">Metabolic</span>
+                        <div class="ob-track"><div class="ob-fill ob-purple" id="organ-metabolic-bar" style="width:0%"></div></div>
+                        <span class="ob-val" id="organ-metabolic-val">--</span>
+                    </div>
+                    <div class="organ-bar-row">
+                        <span class="ob-label">Liver</span>
+                        <div class="ob-track"><div class="ob-fill ob-teal" id="organ-liver-bar" style="width:0%"></div></div>
+                        <span class="ob-val" id="organ-liver-val">--</span>
+                    </div>
+                    <div class="organ-bar-row">
+                        <span class="ob-label">Kidney</span>
+                        <div class="ob-track"><div class="ob-fill ob-orange" id="organ-kidney-bar" style="width:0%"></div></div>
+                        <span class="ob-val" id="organ-kidney-val">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHOLESTEROL TREND -->
+            <div class="hc hc-trend">
+                <div class="hc-row-space">
+                    <h3 class="hc-title">Cholesterol trend</h3>
+                    <span class="trend-chip trend-good" id="trend-direction">↘ Improving</span>
+                </div>
+                <p class="trend-desc">
+                    <span id="chol-val">--</span> mg/dL &nbsp;·&nbsp; <span id="chol-status-text">--</span>
+                </p>
+            </div>
+
+            <!-- VITALS MINI GRID -->
+            <div class="vitals-mini-grid">
+                <div class="hc vital-mini">
+                    <p class="hc-label">Blood Pressure</p>
+                    <strong class="vital-big" id="bp-val">--</strong>
+                    <span class="vital-unit-sm">mmHg</span>
+                    <div class="bp-mini-markers">
+                        <span class="bpm" id="bp-marker-normal">Normal</span>
+                        <span class="bpm" id="bp-marker-warn">Pre-HTN</span>
+                        <span class="bpm" id="bp-marker-danger">HTN</span>
+                    </div>
+                    <p class="vital-sub">MAP: <b id="bp-map">--</b> · PP: <b id="bp-pp">--</b></p>
+                </div>
+                <div class="hc vital-mini">
+                    <p class="hc-label">Fasting Glucose</p>
+                    <strong class="vital-big" id="sugar-glucose-val">--</strong>
+                    <span class="vital-unit-sm">mg/dL</span>
+                    <p class="vital-sub"><b id="sugar-glucose-status">--</b></p>
+                </div>
+                <div class="hc vital-mini">
+                    <p class="hc-label">HbA1c</p>
+                    <strong class="vital-big" id="sugar-hba1c-val">--</strong>
+                    <span class="vital-unit-sm">%</span>
+                    <p class="vital-sub"><b id="sugar-hba1c-status">--</b></p>
+                </div>
+                <div class="hc vital-mini">
+                    <p class="hc-label">BMI</p>
+                    <strong class="vital-big" id="bmi-val">--</strong>
+                    <span class="vital-unit-sm">kg/m²</span>
+                    <p class="vital-sub"><b id="bmi-status-text">--</b></p>
+                    <div class="status-indicator" id="bmi-status-dot"><span class="dot"></span></div>
+                </div>
+                <div class="hc vital-mini">
+                    <p class="hc-label">Heart Rate</p>
+                    <strong class="vital-big animate-heartbeat" id="pulse-val">--</strong>
+                    <span class="vital-unit-sm">bpm</span>
+                    <p class="vital-sub"><b id="pulse-status-text">--</b></p>
+                </div>
+            </div>
+
+            <!-- CLINICAL PROFILE (all 9 intake model inputs) -->
+            <div class="hc hc-profile" id="clinical-profile-card">
+                <div class="hc-row-space" style="margin-bottom:.9rem;">
+                    <div style="display:flex;align-items:center;gap:.5rem;">
+                        <div class="profile-icon-badge">
+                            <i class="fa-solid fa-user-doctor"></i>
+                        </div>
+                        <div>
+                            <p class="hc-title" style="margin:0;">Clinical Profile</p>
+                            <p style="font-size:.68rem;color:var(--lt-muted);margin:0;">All 9 model input features</p>
+                        </div>
+                    </div>
+                    <button id="edit-profile-btn" class="profile-edit-btn" title="Edit clinical history">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </button>
+                </div>
+
+                <!-- 2-col grid of feature chips -->
+                <div class="profile-grid" id="profile-grid">
+                    <!-- Populated by app.js -->
+                    <div class="profile-chip skeleton"><span class="pc-label">Age</span><span class="pc-val" id="pc-age">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">Sex</span><span class="pc-val" id="pc-sex">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">Education</span><span class="pc-val" id="pc-education">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">Smoking</span><span class="pc-val" id="pc-smoker">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">Cigs/Day</span><span class="pc-val" id="pc-cigs">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">BP Meds</span><span class="pc-val" id="pc-bpmeds">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">Hypertension</span><span class="pc-val" id="pc-hyp">--</span></div>
+                    <div class="profile-chip skeleton"><span class="pc-label">Stroke Hx</span><span class="pc-val" id="pc-stroke">--</span></div>
+                    <div class="profile-chip skeleton col-span-2"><span class="pc-label">Diabetes</span><span class="pc-val" id="pc-diabetes">--</span></div>
+                </div>
+
+                <p class="profile-note">
+                    <i class="fa-solid fa-circle-info"></i>
+                    These 9 clinical features + 8 blood biomarkers = the model's full 17-feature input.
+                </p>
+            </div>
+
+            <!-- REPORT UPLOAD -->
+            <div class="hc hc-upload" id="upload-tile">
+                <div class="hc-row-space" style="margin-bottom:.75rem;">
+                    <p class="hc-title">Blood Report</p>
+                    <i class="fa-solid fa-file-medical" style="color:#7C71D9;font-size:1.1rem;"></i>
+                </div>
+                <div class="upload-drop" id="drop-zone">
+                    <input type="file" id="file-input" accept=".pdf" class="hidden">
+                    <div id="upload-icon-box" class="upload-drop-inner">
+                        <i class="fa-solid fa-cloud-arrow-up upload-drop-icon"></i>
+                        <p class="upload-drop-text">Drop PDF or <span class="upload-link">browse</span></p>
+                        <p class="upload-drop-sub">Blood test reports only</p>
+                    </div>
+                    <div class="upload-drop-inner hidden" id="upload-loading">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem;color:#7C71D9;"></i>
+                        <p class="upload-drop-text" id="upload-status-text">Uploading...</p>
+                    </div>
+                </div>
+                <p class="upload-info" id="uploaded-report-info">No report uploaded yet.</p>
+            </div>
+
+        </div><!-- /.dh-cards-col -->
+
+        <!-- ── COPILOT PANEL ── -->
+        <aside class="dh-copilot-panel" id="copilot-panel">
+            <div class="dh-copilot-header">
+                <div>
+                    <p class="dh-twin-label">Powered by Gemma 2</p>
+                    <h3 class="dh-copilot-title">Health Copilot</h3>
+                </div>
+                <button id="close-copilot-btn" class="dh-icon-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="dh-chat-messages" id="chat-messages">
+                <div class="dc-msg dc-msg--ai">
+                    Hello! I'm your TwinCare Health Copilot. Ask me about your glucose, cholesterol, CVD risk, or anything from your latest report.
+                </div>
+            </div>
+            <form id="copilot-form" class="dh-chat-form">
+                <input type="text" id="chat-input" placeholder="Ask about your vitals...">
+                <button type="submit" class="dh-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </aside>
+
+    </div><!-- /.dh-body -->
+</section>
+
+<!-- ══════════════════════════════════════════════
+     SHAP MODAL
+══════════════════════════════════════════════════ -->
+<div id="shap-modal" class="modal-overlay hidden">
+    <div class="shap-modal-card">
+        <div class="shap-modal-header">
+            <div style="display:flex;align-items:center;gap:.6rem;">
+                <i class="fa-solid fa-chart-line" style="color:#7C71D9;"></i>
+                <h2 style="font-size:1.05rem;font-weight:700;color:#111;">Risk Contribution Analysis (SHAP)</h2>
+            </div>
+            <button id="close-modal-btn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;">&times;</button>
+        </div>
+        <div style="padding:1.25rem 0;">
+            <p style="font-size:.8rem;color:#888;margin-bottom:1rem;">
+                How your biomarkers shift CVD risk from the population baseline (<span id="shap-base-val">--%</span>).
+            </p>
+            <div class="shap-chart" id="shap-chart-container"></div>
+        </div>
+        <div style="border-top:1px solid #F0F0F0;padding-top:.85rem;display:flex;justify-content:flex-end;">
+            <button id="close-modal-footer-btn" style="background:#F5F5F5;border:none;padding:.5rem 1.2rem;border-radius:8px;font-size:.85rem;cursor:pointer;font-weight:600;">Close</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js?v=11"></script>
+</body>
+</html>

@@ -39,17 +39,16 @@ services:
       - uploads:/app/uploads
     restart: unless-stopped
 
-  # Frontend - uncomment when frontend files are added
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   platform: linux/amd64
-  #   container_name: twincare-frontend
-  #   ports:
-  #     - "3000:80"
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    container_name: twincare-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:

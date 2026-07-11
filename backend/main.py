@@ -11,8 +11,10 @@ Built for AMD Developer Hackathon: ACT II, Track 3 — Unicorn (Open Innovation)
 import logging
 from contextlib import asynccontextmanager
 
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from config import settings
 from database import create_tables
@@ -113,12 +115,17 @@ def health_check():
     }
 
 
-@app.get("/", tags=["System"])
-def root():
-    """Root endpoint with API info."""
-    return {
-        "message": "Welcome to TwinCare AI API",
-        "docs": "/docs",
-        "health": "/health",
-        "version": "1.0.0",
-    }
+# --- Static Files Mounting ---
+frontend_dir = Path(__file__).parent.parent / "frontend"
+if frontend_dir.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
+else:
+    @app.get("/", tags=["System"])
+    def root():
+        """Root endpoint with API info (Fallback when frontend is not built)."""
+        return {
+            "message": "Welcome to TwinCare AI API (Frontend directory missing)",
+            "docs": "/docs",
+            "health": "/health",
+            "version": "1.0.0",
+        }
