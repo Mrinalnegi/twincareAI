@@ -90,7 +90,7 @@ def _fallback_response(messages: list[dict]) -> str:
         return """
         [
           {
-            "name": "glucose",
+            "name": "fasting_glucose",
             "display_name": "Fasting Glucose",
             "value": 115.0,
             "unit": "mg/dL",
@@ -98,20 +98,12 @@ def _fallback_response(messages: list[dict]) -> str:
             "status": "high"
           },
           {
-            "name": "ldl_cholesterol",
-            "display_name": "LDL Cholesterol",
-            "value": 142.0,
+            "name": "total_cholesterol",
+            "display_name": "Total Cholesterol",
+            "value": 240.0,
             "unit": "mg/dL",
-            "reference_range": "<100",
+            "reference_range": "<200",
             "status": "high"
-          },
-          {
-            "name": "hemoglobin",
-            "display_name": "Hemoglobin",
-            "value": 14.5,
-            "unit": "g/dL",
-            "reference_range": "13.8-17.2",
-            "status": "normal"
           },
           {
             "name": "systolic_bp",
@@ -120,6 +112,30 @@ def _fallback_response(messages: list[dict]) -> str:
             "unit": "mmHg",
             "reference_range": "<120",
             "status": "high"
+          },
+          {
+            "name": "diastolic_bp",
+            "display_name": "Diastolic Blood Pressure",
+            "value": 85.0,
+            "unit": "mmHg",
+            "reference_range": "<80",
+            "status": "high"
+          },
+          {
+            "name": "bmi",
+            "display_name": "BMI",
+            "value": 28.5,
+            "unit": "kg/m2",
+            "reference_range": "18.5-24.9",
+            "status": "high"
+          },
+          {
+            "name": "heart_rate",
+            "display_name": "Resting Heart Rate",
+            "value": 78.0,
+            "unit": "bpm",
+            "reference_range": "60-100",
+            "status": "normal"
           }
         ]
         """
