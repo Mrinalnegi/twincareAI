@@ -84,7 +84,7 @@ def _fallback_response(messages: list[dict]) -> str:
             last_user_msg = msg.get("content", "")
             break
 
-    if "extract" in last_user_msg.lower() or "biomarker" in last_user_msg.lower():
+    if "medical lab report parser" in last_user_msg.lower() or "extract all biomarker values" in last_user_msg.lower():
         # Provide a realistic demo extraction so the hackathon presentation doesn't crash
         # when the Fireworks API key is unauthorized or rate limited.
         return """
@@ -139,6 +139,9 @@ def _fallback_response(messages: list[dict]) -> str:
           }
         ]
         """
+    elif "health ai assistant" in last_user_msg.lower() or "insight sentence" in last_user_msg.lower():
+        # Clean, human-friendly fallback for dashboard health insights
+        return "Review your highlighted biomarkers and risk metrics on the dashboard to track your wellness. 🧬"
 
     return (
         "I'm currently unable to process this request as the AI service is temporarily "
