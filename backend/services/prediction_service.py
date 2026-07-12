@@ -69,30 +69,30 @@ async def run_prediction_for_user(
             detail="Gender must be set to 'male' or 'female' to compute Framingham heart disease risk."
         )
 
-    # Helper to retrieve twin biomarker values
-    def get_biomarker_val(name):
+    # Helper to retrieve twin biomarker values with defaults for missing data
+    def get_biomarker_val(name, default=0.0):
         bio = biomarkers.get(name)
-        if isinstance(bio, dict):
-            return bio.get("value")
-        return None
+        if isinstance(bio, dict) and bio.get("value") is not None:
+            return float(bio.get("value"))
+        return default
 
-    # Construct patient input dict
+    # Construct patient input dict with safe fallbacks
     patient_dict = {
         "age": float(age),
         "sex": int(sex),
-        "education": intake.education,
-        "current_smoker": intake.current_smoker,
-        "cigs_per_day": intake.cigs_per_day,
-        "bp_meds": intake.bp_meds,
-        "prevalent_stroke": intake.prevalent_stroke,
-        "prevalent_hyp": intake.prevalent_hyp,
-        "diabetes": intake.diabetes,
-        "total_cholesterol": get_biomarker_val("total_cholesterol"),
-        "systolic_bp": get_biomarker_val("systolic_bp"),
-        "diastolic_bp": get_biomarker_val("diastolic_bp"),
-        "bmi": get_biomarker_val("bmi"),
-        "heart_rate": get_biomarker_val("heart_rate"),
-        "fasting_glucose": get_biomarker_val("fasting_glucose"),
+        "education": intake.education or 1,
+        "current_smoker": intake.current_smoker or False,
+        "cigs_per_day": intake.cigs_per_day or 0,
+        "bp_meds": intake.bp_meds or False,
+        "prevalent_stroke": intake.prevalent_stroke or False,
+        "prevalent_hyp": intake.prevalent_hyp or False,
+        "diabetes": intake.diabetes or False,
+        "total_cholesterol": get_biomarker_val("total_cholesterol", default=180.0),
+        "systolic_bp": get_biomarker_val("systolic_bp", default=120.0),
+        "diastolic_bp": get_biomarker_val("diastolic_bp", default=80.0),
+        "bmi": get_biomarker_val("bmi", default=24.0),
+        "heart_rate": get_biomarker_val("heart_rate", default=75.0),
+        "fasting_glucose": get_biomarker_val("fasting_glucose", default=90.0),
     }
 
     # 4. Execute prediction
