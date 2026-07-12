@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   postgres:
@@ -22,13 +21,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    platform: linux/amd64
     container_name: twincare-backend
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://twincare:${POSTGRES_PASSWORD:-twincare_dev}@postgres:5432/twincare
       FIREWORKS_API_KEY: ${FIREWORKS_API_KEY}
+      FIREWORKS_MODEL: ${FIREWORKS_MODEL:-accounts/fireworks/models/gemma-7b-it}
       JWT_SECRET: ${JWT_SECRET:-twincare-hackathon-secret-change-in-prod}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
@@ -43,7 +42,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    platform: linux/amd64
     container_name: twincare-frontend
     ports:
       - "3000:80"

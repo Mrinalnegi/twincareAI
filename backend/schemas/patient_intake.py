@@ -13,6 +13,7 @@ class PatientIntakeBase(BaseModel):
     prevalent_stroke: bool | None = Field(None, description="Has history of stroke")
     prevalent_hyp: bool | None = Field(None, description="Has history of hypertension")
     diabetes: bool | None = Field(None, description="Has diabetes")
+    doctors_prescription: str | None = Field(None, description="Current doctors prescription notes")
 
 
 class PatientIntakeCreate(PatientIntakeBase):

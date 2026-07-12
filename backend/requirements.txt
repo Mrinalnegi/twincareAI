@@ -10,9 +10,11 @@ psycopg2-binary==2.9.10
 # Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 
 # Validation
 pydantic[email-validator]==2.10.3
+email-validator
 
 # Config
 python-dotenv==1.0.1

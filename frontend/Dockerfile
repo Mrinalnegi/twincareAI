@@ -4,6 +4,9 @@ FROM nginx:alpine
 # Copy all static frontend files to Nginx public html directory
 COPY . /usr/share/nginx/html
 
+# Copy custom Nginx config (proxies /api to backend)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Expose port 80 for serving the app
 EXPOSE 80
 

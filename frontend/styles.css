@@ -374,3 +374,15 @@ circle[id^="ring-"] { transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1); }
 /* ─── RESPONSIVE ─────────────────────────────────────────── */
 @media (max-width:960px) { .dh-body { grid-template-columns:1fr; } .dh-copilot-panel { position:fixed; right:0; top:0; bottom:0; width:320px; box-shadow:-4px 0 20px rgba(0,0,0,.1); transform:translateX(100%); transition:transform .3s ease; z-index:200; } .dh-copilot-panel.open { transform:translateX(0); } }
 @media (max-width:768px) { .auth-brand-panel { display:none; } .auth-form-panel { width:100%; } .intake-grid { grid-template-columns:1fr; } .col-span-2 { grid-column:span 1; } .landing-bottom-content { flex-direction:column; align-items:flex-start; } .landing-cta-group { align-items:flex-start; } .landing-bottom-overlay { padding:2rem 1.5rem 1.5rem; } .hc-row-grid { grid-template-columns:1fr; } .vitals-mini-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* ── PRINT STYLES FOR CLINICAL PDF EXPORT ── */
+@media print {
+    body { background: white !important; color: black !important; }
+    .dh-header-right, .dh-copilot-panel, #edit-intake-btn, .sidebar, #view-shap-btn { display: none !important; }
+    .dh-body { grid-template-columns: 1fr !important; gap: 1rem !important; }
+    .dh-cards-col { width: 100% !important; }
+    .hc { border: 1px solid #ddd !important; box-shadow: none !important; break-inside: avoid; margin-bottom: 1rem; }
+    .hc-title { color: black !important; }
+    #amd-telemetry { display: none !important; }
+    @page { size: A4; margin: 10mm; }
+}

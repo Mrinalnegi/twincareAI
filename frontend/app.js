@@ -66,7 +66,7 @@ async function initApp() {
             });
             if (!userRes.ok) throw new Error("Invalid session");
             currentUser = await userRes.json();
-            
+
             // Check intake status
             const intakeRes = await fetch(`${API_BASE}/patient-intake`, { headers: getHeaders() });
             if (intakeRes.status === 404) {
@@ -145,7 +145,7 @@ tabRegisterBtn.addEventListener("click", () => {
 loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     hideAuthAlert();
-    
+
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-password").value;
 
@@ -244,7 +244,8 @@ intakeForm.addEventListener("submit", async (e) => {
         bp_meds: document.getElementById("intake-bpmeds").value === "true",
         prevalent_stroke: document.getElementById("intake-stroke").value === "true",
         prevalent_hyp: document.getElementById("intake-hyp").value === "true",
-        diabetes: document.getElementById("intake-diabetes").value === "true"
+        diabetes: document.getElementById("intake-diabetes").value === "true",
+        doctors_prescription: document.getElementById("intake-prescription").value
     };
 
     try {
@@ -284,6 +285,7 @@ document.getElementById("edit-intake-btn").addEventListener("click", async () =>
         document.getElementById("intake-stroke").value = data.prevalent_stroke ? "true" : "false";
         document.getElementById("intake-hyp").value = data.prevalent_hyp ? "true" : "false";
         document.getElementById("intake-diabetes").value = data.diabetes ? "true" : "false";
+        document.getElementById("intake-prescription").value = data.doctors_prescription || "";
 
         // Trigger toggles
         if (data.current_smoker) {
@@ -315,6 +317,8 @@ async function loadDashboardData() {
     loadClinicalProfile();
 
     try {
+        const t0 = performance.now();
+
         // A. Load digital twin (organ scores, health score, current biomarkers)
         const twinRes = await fetch(`${API_BASE}/digital-twin`, { headers: getHeaders() });
         if (twinRes.ok) {
@@ -341,6 +345,11 @@ async function loadDashboardData() {
             // Update insight text in copilot chat history
             appendAIInsight(dash.ai_insight);
         }
+
+        const elapsed = Math.round(performance.now() - t0);
+        const latEl = document.getElementById("amd-latency");
+        if (latEl) latEl.textContent = elapsed;
+
     } catch (err) {
         console.error("Error loading dashboard data:", err);
     }
@@ -350,7 +359,7 @@ async function loadDashboardData() {
 function buildWeekStrip() {
     const strip = document.getElementById("week-strip");
     if (!strip) return;
-    const days = ["S","M","T","W","T","F","S"];
+    const days = ["S", "M", "T", "W", "T", "F", "S"];
     const today = new Date().getDay(); // 0=Sun
     strip.innerHTML = days.map((d, i) => `
         <div class="week-day ${i === today ? 'active-day' : ''}">
@@ -402,19 +411,19 @@ function updateDigitalTwinTiles(twin) {
         animateRing("ring-bp", 213.63, bpPct);
 
         // BP status markers
-        ["bp-marker-normal","bp-marker-warn","bp-marker-danger"].forEach(id => {
+        ["bp-marker-normal", "bp-marker-warn", "bp-marker-danger"].forEach(id => {
             const el = document.getElementById(id);
-            if (el) { el.classList.remove("active","normal","warning","danger"); }
+            if (el) { el.classList.remove("active", "normal", "warning", "danger"); }
         });
         if (sys >= 140 || dia >= 90) {
             const el = document.getElementById("bp-marker-danger");
-            if (el) el.classList.add("active","danger");
+            if (el) el.classList.add("active", "danger");
         } else if (sys >= 120 || dia >= 80) {
             const el = document.getElementById("bp-marker-warn");
-            if (el) el.classList.add("active","warning");
+            if (el) el.classList.add("active", "warning");
         } else {
             const el = document.getElementById("bp-marker-normal");
-            if (el) el.classList.add("active","normal");
+            if (el) el.classList.add("active", "normal");
         }
         const pp = sys - dia;
         const map = dia + (sys - dia) / 3;
@@ -495,9 +504,9 @@ function updateDigitalTwinTiles(twin) {
 function updatePredictionTile(pred) {
     const probPercent = (pred.risk_probability * 100).toFixed(1);
     const band = pred.risk_band || "low";
-    
+
     document.getElementById("risk-prob-val").textContent = `${probPercent}%`;
-    
+
     const badge = document.getElementById("risk-band-badge");
     badge.textContent = `${band} risk band`;
     badge.className = `badge badge-${band}`;
@@ -551,7 +560,7 @@ closeModalFooterBtn.addEventListener("click", hideModal);
 function renderShapWaterfall(shapData) {
     const baseValue = shapData.shap_values.base_value || 0;
     document.getElementById("shap-base-val").textContent = (baseValue * 100).toFixed(1) + "%";
-    
+
     shapContainer.innerHTML = "";
 
     const items = shapData.feature_importance || [];
@@ -658,7 +667,7 @@ function resetUploadUI() {
 // Poll status of OCR extraction
 async function pollReportStatus(reportId, filename) {
     uploadStatusText.textContent = "Analyzing biomarkers (OCR)...";
-    
+
     const interval = setInterval(async () => {
         try {
             const res = await fetch(`${API_BASE}/reports/${reportId}/status`, { headers: getHeaders() });
@@ -668,10 +677,10 @@ async function pollReportStatus(reportId, filename) {
             if (data.status === "extracted") {
                 clearInterval(interval);
                 uploadStatusText.textContent = "Assessing health risks...";
-                
+
                 // Refresh dashboard to display newly extracted data
                 await loadDashboardData();
-                
+
                 resetUploadUI();
                 uploadReportInfo.innerHTML = `
                     <i class="fa-solid fa-circle-check text-emerald"></i> 
@@ -689,6 +698,11 @@ async function pollReportStatus(reportId, filename) {
         }
     }, 2000);
 }
+
+// 4. HEADER ACTIONS
+document.getElementById("download-pdf-btn").addEventListener("click", () => {
+    window.print();
+});
 
 // 8. INTERACTIVE AI COPILOT CHAT PANEL
 const copilotForm = document.getElementById("copilot-form");
@@ -712,6 +726,7 @@ copilotForm.addEventListener("submit", async (e) => {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
     try {
+        const t0 = performance.now();
         const res = await fetch(`${API_BASE}/copilot/chat`, {
             method: "POST",
             headers: getHeaders(),
@@ -722,6 +737,10 @@ copilotForm.addEventListener("submit", async (e) => {
         chatMessages.removeChild(typingBubble);
 
         if (res.ok) {
+            const elapsed = Math.round(performance.now() - t0);
+            const latEl = document.getElementById("amd-latency");
+            if (latEl) latEl.textContent = elapsed;
+
             appendChatMessage(data.response, "assistant");
         } else {
             appendChatMessage("Sorry, I encountered an error communicating with Kimi. Please try again.", "assistant");
@@ -736,10 +755,10 @@ function appendChatMessage(text, role) {
     const bubble = document.createElement("div");
     const isAi = (role === "assistant" || role === "ai");
     bubble.className = `dc-msg ${isAi ? 'dc-msg--ai' : 'dc-msg--user'}`;
-    
+
     // Convert newlines to breaks
     bubble.innerHTML = text.replace(/\n/g, "<br>");
-    
+
     chatMessages.appendChild(bubble);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -765,47 +784,47 @@ async function loadClinicalProfile() {
     try {
         const [intakeRes, userRes] = await Promise.all([
             fetch(`${API_BASE}/patient-intake`, { headers: getHeaders() }),
-            fetch(`${API_BASE}/auth/me`,        { headers: getHeaders() })
+            fetch(`${API_BASE}/auth/me`, { headers: getHeaders() })
         ]);
 
         if (!intakeRes.ok || !userRes.ok) return;
         const intake = await intakeRes.json();
-        const user   = await userRes.json();
+        const user = await userRes.json();
 
         // Remove skeleton class from all chips
         document.querySelectorAll('.profile-chip.skeleton')
-                .forEach(c => c.classList.remove('skeleton'));
+            .forEach(c => c.classList.remove('skeleton'));
 
         // ─ Age (from date_of_birth) ─
         const ageEl = document.getElementById('pc-age');
         if (ageEl && user.date_of_birth) {
-            const dob  = new Date(user.date_of_birth);
-            const age  = Math.floor((Date.now() - dob) / (365.25 * 24 * 3600 * 1000));
+            const dob = new Date(user.date_of_birth);
+            const age = Math.floor((Date.now() - dob) / (365.25 * 24 * 3600 * 1000));
             ageEl.textContent = `${age} yrs`;
-            ageEl.className   = 'pc-val pc-neutral';
+            ageEl.className = 'pc-val pc-neutral';
         }
 
         // ─ Sex ─
         const sexEl = document.getElementById('pc-sex');
         if (sexEl && user.gender) {
             sexEl.textContent = user.gender.charAt(0).toUpperCase() + user.gender.slice(1);
-            sexEl.className   = 'pc-val pc-neutral';
+            sexEl.className = 'pc-val pc-neutral';
         }
 
         // ─ Education ─
-        const eduMap = { 1:'Some HS', 2:'HS / GED', 3:'Some College', 4:'College+' };
-        const eduEl  = document.getElementById('pc-education');
+        const eduMap = { 1: 'Some HS', 2: 'HS / GED', 3: 'Some College', 4: 'College+' };
+        const eduEl = document.getElementById('pc-education');
         if (eduEl && intake.education) {
             eduEl.textContent = eduMap[intake.education] ?? `Level ${intake.education}`;
-            eduEl.className   = 'pc-val pc-neutral';
+            eduEl.className = 'pc-val pc-neutral';
         }
 
         // ─ Smoking ─
         const smokerEl = document.getElementById('pc-smoker');
         if (smokerEl) {
-            const smokes       = intake.current_smoker;
+            const smokes = intake.current_smoker;
             smokerEl.textContent = smokes ? 'Active Smoker' : 'Non-Smoker';
-            smokerEl.className   = `pc-val ${smokes ? 'pc-yes' : 'pc-no'}`;
+            smokerEl.className = `pc-val ${smokes ? 'pc-yes' : 'pc-no'}`;
         }
 
         // ─ Cigs/Day ─
@@ -813,23 +832,30 @@ async function loadClinicalProfile() {
         if (cigsEl) {
             const n = intake.cigs_per_day ?? 0;
             cigsEl.textContent = n > 0 ? `${n} / day` : '0 (none)';
-            cigsEl.className   = `pc-val ${n > 0 ? 'pc-yes' : 'pc-no'}`;
+            cigsEl.className = `pc-val ${n > 0 ? 'pc-yes' : 'pc-no'}`;
         }
 
         // ─ Boolean risk flags ─
         const flags = [
-            { id: 'pc-bpmeds',  key: 'bp_meds',          yes: 'On Meds',    no: 'Not on Meds' },
-            { id: 'pc-hyp',     key: 'prevalent_hyp',     yes: 'Diagnosed',  no: 'None' },
-            { id: 'pc-stroke',  key: 'prevalent_stroke',  yes: 'Hx Stroke',  no: 'None' },
-            { id: 'pc-diabetes',key: 'diabetes',          yes: 'Diabetic',   no: 'No Diabetes' },
+            { id: 'pc-bpmeds', key: 'bp_meds', yes: 'On Meds', no: 'Not on Meds' },
+            { id: 'pc-hyp', key: 'prevalent_hyp', yes: 'Diagnosed', no: 'None' },
+            { id: 'pc-stroke', key: 'prevalent_stroke', yes: 'Hx Stroke', no: 'None' },
+            { id: 'pc-diabetes', key: 'diabetes', yes: 'Diabetic', no: 'No Diabetes' },
         ];
         flags.forEach(({ id, key, yes, no }) => {
             const el = document.getElementById(id);
             if (!el) return;
-            const val      = intake[key];
+            const val = intake[key];
             el.textContent = val ? yes : no;
-            el.className   = `pc-val ${val ? 'pc-yes' : 'pc-no'}`;
+            el.className = `pc-val ${val ? 'pc-yes' : 'pc-no'}`;
         });
+
+        // ─ Doctors Prescription ─
+        const rxEl = document.getElementById('pc-prescription');
+        if (rxEl) {
+            rxEl.textContent = intake.doctors_prescription || 'None';
+            rxEl.className = `pc-val ${intake.doctors_prescription ? 'pc-neutral' : 'pc-no'}`;
+        }
 
     } catch (err) {
         console.warn('Clinical profile load failed:', err);

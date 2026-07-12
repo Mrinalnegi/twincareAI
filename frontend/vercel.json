@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/v1/:match*",
+      "destination": "https://YOUR_RAILWAY_BACKEND_URL.up.railway.app/api/v1/:match*"
+    }
+  ]
+}

@@ -32,6 +32,7 @@ class PatientIntake(Base):
     prevalent_stroke: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     prevalent_hyp: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     diabetes: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    doctors_prescription: Mapped[str | None] = mapped_column(String, nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
